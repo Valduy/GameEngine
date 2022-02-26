@@ -41,7 +41,11 @@ public:
 			return result;
 		}
 		if (result = CreateInputLayout(); FAILED(result)) {
-			
+			vertex_byte_code_->Release();
+			pixel_byte_code_->Release();
+			vertex_shader_->Release();
+			pixel_shader_->Release();
+			return result;
 		}
 
 		return result;
