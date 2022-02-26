@@ -17,6 +17,7 @@ public:
 		, context_(nullptr)
 		, back_texture_(nullptr)
 		, render_target_view_(nullptr)
+		, raster_state_(nullptr)
 	{}
 
 	HRESULT Initialize() {
@@ -38,6 +39,13 @@ public:
 			back_texture_->Release();
 			return result;
 		}
+		if (result = CreateRasterState(); FAILED(result)) {
+			swap_chain_->Release();
+			device_->Release();
+			context_->Release();
+			back_texture_->Release();
+			render_target_view_->Release();
+		}
 
 		return result;
 	}
@@ -48,6 +56,7 @@ public:
 		context_->Release();		
 		back_texture_->Release();
 		render_target_view_->Release();
+		raster_state_->Release();
 	}
 
 	void Run() {
@@ -60,7 +69,8 @@ private:
 	ID3D11Device* device_;
 	ID3D11DeviceContext* context_;	
 	ID3D11Texture2D* back_texture_;
-	ID3D11RenderTargetView* render_target_view_;	
+	ID3D11RenderTargetView* render_target_view_;
+	ID3D11RasterizerState* raster_state_;
 
 	HRESULT CreateDeviceAndSwapChain() {
 		DXGI_SWAP_CHAIN_DESC swap_chain_desc = {};
@@ -103,6 +113,14 @@ private:
 
 	HRESULT CreateRenderTargetView() {
 		return device_->CreateRenderTargetView(back_texture_, nullptr, &render_target_view_);
+	}
+
+	HRESULT CreateRasterState() {
+		CD3D11_RASTERIZER_DESC raster_desc = {};
+		raster_desc.CullMode = D3D11_CULL_NONE;
+		raster_desc.FillMode = D3D11_FILL_SOLID;
+
+		return device_->CreateRasterizerState(&raster_desc, &raster_state_);
 	}
 };
 
