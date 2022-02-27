@@ -11,44 +11,68 @@ public:
     }
 
     unsigned int GetWidth() const {
-        RECT rect;
-        GetWindowRect(handle_, &rect);
-	    return rect.right - rect.left;
+        return width_;
     }
 
     unsigned int GetHeight() const {
-        RECT rect;
-        GetWindowRect(handle_, &rect);
-        return rect.top - rect.bottom;
+        return height_;
     }
 
-	Window(unsigned int width, unsigned int height)
-	{
-        HINSTANCE instance = GetModuleHandle(nullptr);
-        RegisterWindowClass(instance);
-        handle_ = CreateWindowInstance(instance, width, height);
+	Window(HINSTANCE instance, LPCWSTR window_name, unsigned int width, unsigned int height)
+		: instance_(instance)
+		, window_name_(window_name)
+		, width_(width)
+		, height_(height)
+		, handle_(RegisterAndCreateWindow())
+	{}
 
+    void Show() {
         ShowWindow(handle_, SW_SHOW);
         SetForegroundWindow(handle_);
         SetFocus(handle_);
         ShowCursor(true);
-	}
-
-private:
-    LPCWSTR window_name_ = L"GameWindow";
-    HWND handle_;
-
-    static LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam) {
-        return DefWindowProc(hwnd, umessage, wparam, lparam);
     }
 
-    void RegisterWindowClass(HINSTANCE instance) const {
+private:
+    HINSTANCE instance_;
+    LPCWSTR window_name_;
+    unsigned int width_;
+    unsigned int height_;
+    HWND handle_;
+
+    static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+        Window* window;
+
+        if (msg == WM_CREATE) {
+	        const auto create_struct = reinterpret_cast<CREATESTRUCT*>(lparam);
+            window = reinterpret_cast<Window*>(create_struct);
+            SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
+        }
+        else {
+	        window = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        }
+
+        switch (msg) {
+        case WM_SIZE:
+            window->width_ = LOWORD(lparam);
+            window->height_ = HIWORD(lparam);
+        }
+
+        return DefWindowProc(hwnd, msg, wparam, lparam);
+    }
+
+    HWND RegisterAndCreateWindow() {
+        RegisterWindowClass();
+        return CreateWindowInstance();
+    }
+
+    void RegisterWindowClass() {
         WNDCLASSEX window_class;
         window_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
         window_class.lpfnWndProc = WndProc;        
         window_class.cbClsExtra = 0;
         window_class.cbWndExtra = 0;
-        window_class.hInstance = instance;
+        window_class.hInstance = instance_;
         window_class.hIcon = LoadIcon(nullptr, IDI_WINLOGO);
         window_class.hIconSm = window_class.hIcon;
         window_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
@@ -60,8 +84,8 @@ private:
         RegisterClassEx(&window_class);
     }
 
-    HWND CreateWindowInstance(HINSTANCE instance, unsigned int width, unsigned int height) const {
-        RECT window_rect = { 0, 0, static_cast<LONG>(width), static_cast<LONG>(height) };
+    HWND CreateWindowInstance() {
+        RECT window_rect = { 0, 0, static_cast<LONG>(width_), static_cast<LONG>(height_) };
         AdjustWindowRect(&window_rect, WS_OVERLAPPEDWINDOW, FALSE);
 
         return CreateWindowEx(
@@ -69,14 +93,14 @@ private:
             window_name_, 
             window_name_,
             WS_SYSMENU | WS_CAPTION | WS_MINIMIZEBOX | WS_THICKFRAME,
-            (GetSystemMetrics(SM_CXSCREEN) - width) / 2,
-            (GetSystemMetrics(SM_CYSCREEN) - height) / 2,
+            (GetSystemMetrics(SM_CXSCREEN) - width_) / 2,
+            (GetSystemMetrics(SM_CYSCREEN) - height_) / 2,
             window_rect.right - window_rect.left, 
             window_rect.bottom - window_rect.top, 
             nullptr, 
             nullptr, 
-            instance, 
-            nullptr);
+            instance_, 
+            this);
     }
 };
 

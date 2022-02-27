@@ -18,8 +18,8 @@ public:
 		return context_.Get();
 	}
 
-	Renderer()
-		: window_(800, 800)
+	Renderer(HINSTANCE instance, LPCWSTR window_name, unsigned int width, unsigned int height)
+		: window_(instance, window_name, width, height)
 		, swap_chain_(nullptr)
 		, device_(nullptr)
 		, context_(nullptr)
@@ -30,7 +30,8 @@ public:
 
 	HRESULT Init() {
 		HRESULT result;
-		
+		window_.Show();
+
 		if(result = CreateDeviceAndSwapChain(); FAILED(result)) {
 			return result;
 		}
@@ -52,8 +53,8 @@ public:
 		context_->RSSetState(raster_state_.Get());
 
 		D3D11_VIEWPORT viewport = {};
-		viewport.Width = static_cast<float>(800);
-		viewport.Height = static_cast<float>(800);
+		viewport.Width = static_cast<float>(window_.GetWidth());
+		viewport.Height = static_cast<float>(window_.GetHeight());
 		viewport.TopLeftX = 0;
 		viewport.TopLeftY = 0;
 		viewport.MinDepth = 0;
@@ -80,8 +81,8 @@ private:
 	HRESULT CreateDeviceAndSwapChain() {
 		DXGI_SWAP_CHAIN_DESC swap_chain_desc = {};
 		swap_chain_desc.BufferCount = 2;
-		swap_chain_desc.BufferDesc.Width = 800; // TODO:
-		swap_chain_desc.BufferDesc.Height = 800; // TODO:
+		swap_chain_desc.BufferDesc.Width = window_.GetWidth();
+		swap_chain_desc.BufferDesc.Height = window_.GetHeight();
 		swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
 		swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;

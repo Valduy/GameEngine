@@ -12,7 +12,7 @@
 #pragma comment(lib, "dxguid.lib")
 
 int main() {
-	engine::Renderer renderer;
+	engine::Renderer renderer(GetModuleHandle(nullptr), L"Engine", 800, 800);
 	auto res = renderer.Init();
 
 	engine::Shader shader(renderer, L"../Shaders/MyVeryFirstShader.hlsl");
