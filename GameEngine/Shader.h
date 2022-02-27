@@ -8,9 +8,8 @@ namespace engine {
 
 class Shader {
 public:
-	Shader(ID3D11Device& device, ID3D11DeviceContext& context, LPCWSTR path)
-		: device_(device)
-		, context_(context)
+	Shader(Renderer& renderer, LPCWSTR path)
+		: renderer_(renderer)
 		, path_(path)
 		, vertex_byte_code_(nullptr)
 		, pixel_byte_code_(nullptr)
@@ -19,7 +18,7 @@ public:
 		, layout_(nullptr) 
 	{}
 
-	HRESULT Initialize() {
+	HRESULT Init() {
 		HRESULT result;
 
 		if (result = CompileVertexByteCode(); FAILED(result)) {
@@ -60,13 +59,14 @@ public:
 	}
 
 	void SetShader() {
-		context_.VSSetShader(vertex_shader_, nullptr, 0);
-		context_.PSSetShader(pixel_shader_, nullptr, 0);
+		renderer_.GetContext()->IASetInputLayout(layout_);
+		renderer_.GetContext()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		renderer_.GetContext()->VSSetShader(vertex_shader_, nullptr, 0);
+		renderer_.GetContext()->PSSetShader(pixel_shader_, nullptr, 0);
 	}
 	
 private:
-	ID3D11Device& device_;
-	ID3D11DeviceContext& context_;
+	Renderer& renderer_;
 	LPCWSTR path_;
 
 	ID3DBlob* vertex_byte_code_;
@@ -78,7 +78,6 @@ private:
 	HRESULT CompileVertexByteCode() {
 		return CompileByteCode(
 			path_,
-			nullptr,
 			"VSMain",
 			"vs_5_0",
 			&vertex_byte_code_);
@@ -87,17 +86,16 @@ private:
 	HRESULT CompilePixelByteCode() {
 		return CompileByteCode(
 			path_,
-			nullptr,
 			"PSMain",
 			"ps_5_0",
 			&pixel_byte_code_);
 	}
 
-	HRESULT CompileByteCode(LPCWSTR path, const D3D_SHADER_MACRO* macros, LPCSTR entry_point, LPCSTR target, ID3DBlob** byte_code) {
+	HRESULT CompileByteCode(LPCWSTR path, LPCSTR entry_point, LPCSTR target, ID3DBlob** byte_code) {
 		ID3DBlob* error_vertex_code_ = nullptr;
 		HRESULT result = D3DCompileFromFile(
 			path,
-			macros,
+			nullptr,
 			nullptr,
 			entry_point,
 			target,
@@ -124,7 +122,7 @@ private:
 	}
 
 	HRESULT CreateVertexShader() {
-		return device_.CreateVertexShader(
+		return renderer_.GetDevice()->CreateVertexShader(
 			vertex_byte_code_->GetBufferPointer(),
 			vertex_byte_code_->GetBufferSize(),
 			nullptr,
@@ -132,7 +130,7 @@ private:
 	}
 
 	HRESULT CreatePixelShader() {
-		return device_.CreatePixelShader(
+		return renderer_.GetDevice()->CreatePixelShader(
 			pixel_byte_code_->GetBufferPointer(),
 			pixel_byte_code_->GetBufferSize(),
 			nullptr,
@@ -161,7 +159,7 @@ private:
 			},
 		};
 
-		return device_.CreateInputLayout(
+		return renderer_.GetDevice()->CreateInputLayout(
 			input_elements,
 			2,
 			vertex_byte_code_->GetBufferPointer(),

@@ -10,6 +10,14 @@ namespace engine {
 
 class Renderer {
 public:
+	ID3D11Device* GetDevice() const {
+		return device_.Get();
+	}
+
+	ID3D11DeviceContext* GetContext() const {
+		return context_.Get();
+	}
+
 	Renderer()
 		: window_(800, 800)
 		, swap_chain_(nullptr)
@@ -20,63 +28,60 @@ public:
 		, raster_state_(nullptr)
 	{}
 
-	HRESULT Initialize() {
+	HRESULT Init() {
 		HRESULT result;
 		
 		if(result = CreateDeviceAndSwapChain(); FAILED(result)) {
 			return result;
 		}
 		if (result = GetBackTexture(); FAILED(result)) {
-			swap_chain_->Release();
-			device_->Release();
-			context_->Release();
 			return result;
 		}
 		if (result = CreateRenderTargetView(); FAILED(result)) {
-			swap_chain_->Release();
-			device_->Release();
-			context_->Release();
-			back_texture_->Release();
 			return result;
 		}
 		if (result = CreateRasterState(); FAILED(result)) {
-			swap_chain_->Release();
-			device_->Release();
-			context_->Release();
-			back_texture_->Release();
-			render_target_view_->Release();
+			return result;
 		}
 
 		return result;
 	}
 
-	void Release() {
-		swap_chain_->Release();
-		device_->Release();
-		context_->Release();		
-		back_texture_->Release();
-		render_target_view_->Release();
-		raster_state_->Release();
+	void BeginRender() {
+		context_->ClearState();
+		context_->RSSetState(raster_state_.Get());
+
+		D3D11_VIEWPORT viewport = {};
+		viewport.Width = static_cast<float>(800);
+		viewport.Height = static_cast<float>(800);
+		viewport.TopLeftX = 0;
+		viewport.TopLeftY = 0;
+		viewport.MinDepth = 0;
+		viewport.MaxDepth = 1.0f;
+
+		context_->RSSetViewports(1, &viewport);
+		context_->OMSetRenderTargets(1, render_target_view_.GetAddressOf(), nullptr);
 	}
 
-	void Run() {
-		
+	void EndRender() {
+		context_->OMSetRenderTargets(0, nullptr, nullptr);
+		swap_chain_->Present(1, /*DXGI_PRESENT_DO_NOT_WAIT*/ 0);
 	}
 
 private:
 	Window window_;
-	IDXGISwapChain* swap_chain_;
-	ID3D11Device* device_;
-	ID3D11DeviceContext* context_;	
-	ID3D11Texture2D* back_texture_;
-	ID3D11RenderTargetView* render_target_view_;
-	ID3D11RasterizerState* raster_state_;
+	Microsoft::WRL::ComPtr<IDXGISwapChain> swap_chain_;
+	Microsoft::WRL::ComPtr<ID3D11Device> device_;
+	Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> back_texture_;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> render_target_view_;
+	Microsoft::WRL::ComPtr<ID3D11RasterizerState> raster_state_;
 
 	HRESULT CreateDeviceAndSwapChain() {
 		DXGI_SWAP_CHAIN_DESC swap_chain_desc = {};
 		swap_chain_desc.BufferCount = 2;
-		swap_chain_desc.BufferDesc.Width = window_.GetWidth();
-		swap_chain_desc.BufferDesc.Height = window_.GetHeight();
+		swap_chain_desc.BufferDesc.Width = 800; // TODO:
+		swap_chain_desc.BufferDesc.Height = 800; // TODO:
 		swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
 		swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
@@ -108,11 +113,19 @@ private:
 	}
 
 	HRESULT GetBackTexture() {
-		return swap_chain_->GetBuffer(0, IID_ID3D11Texture2D, reinterpret_cast<void**>(&back_texture_));
+		ID3D11Texture2D* ptr = nullptr;
+		HRESULT result = swap_chain_->GetBuffer(0, IID_ID3D11Texture2D, reinterpret_cast<void**>(&ptr));
+
+		if (FAILED(result)) {
+			return result;
+		}
+
+		back_texture_ = ptr;
+		return result;
 	}
 
 	HRESULT CreateRenderTargetView() {
-		return device_->CreateRenderTargetView(back_texture_, nullptr, &render_target_view_);
+		return device_->CreateRenderTargetView(back_texture_.Get(), nullptr, &render_target_view_);
 	}
 
 	HRESULT CreateRasterState() {

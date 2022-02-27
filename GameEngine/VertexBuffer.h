@@ -7,22 +7,14 @@ namespace engine {
 
 class VertexBuffer {
 public:
-	size_t GetSize() const {
-		return size_;
-	}
-
-	UINT GetStribes() const {
-		return sizeof(DirectX::XMFLOAT4) * size_;
-	}
-
-	VertexBuffer(ID3D11Device& device, DirectX::XMFLOAT4* points, size_t size)
-		: device_(device)
+	VertexBuffer(Renderer& renderer, DirectX::XMFLOAT4* points, size_t size)
+		: renderer_(renderer)
 		, points_(points)
 		, size_(size)
 		, vertex_buffer_(nullptr)
 	{}
 
-	HRESULT Initialize() {
+	HRESULT Init() {
 		D3D11_BUFFER_DESC vertex_buf_desc = {};
 		vertex_buf_desc.Usage = D3D11_USAGE_DEFAULT;
 		vertex_buf_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -36,19 +28,22 @@ public:
 		vertex_data.SysMemPitch = 0;
 		vertex_data.SysMemSlicePitch = 0;
 
-		return device_.CreateBuffer(&vertex_buf_desc, &vertex_data, &vertex_buffer_);
+		return renderer_.GetDevice()->CreateBuffer(&vertex_buf_desc, &vertex_data, &vertex_buffer_);
 	}
 
-	void Release() {
-		vertex_buffer_->Release();
+	void SetBuffer() {
+		const UINT strides[] = { static_cast<UINT>(4 * size_) };
+		const UINT offsets[] = { 0 };
+
+		renderer_.GetContext()->IASetVertexBuffers(0, 1, vertex_buffer_.GetAddressOf(), strides, offsets);
 	}
 
 private:
-	ID3D11Device& device_;
+	Renderer& renderer_;
 	DirectX::XMFLOAT4* points_;
 	size_t size_;
 
-	ID3D11Buffer* vertex_buffer_;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> vertex_buffer_;
 };
 
 } // namespace engine

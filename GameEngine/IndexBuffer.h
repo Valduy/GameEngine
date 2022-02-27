@@ -1,19 +1,23 @@
 #pragma once
 
 #include <d3d11.h>
+#include <wrl.h>
+
+#include "Renderer.h"
 
 namespace engine {
+	class Renderer;
 
-class IndexBuffer {
+	class IndexBuffer {
 public:
-	IndexBuffer(ID3D11Device& device, int* indices, size_t size)
-		: device_(device)
+	IndexBuffer(Renderer& renderer, int* indices, size_t size)
+		: renderer_(renderer)
 		, indices_(indices)
 		, size_(size)
-		, index_buffer_()
+		, index_buffer_(nullptr)
 	{}
 
-	void Initialize() {
+	HRESULT Init() {
 		D3D11_BUFFER_DESC index_buf_desc = {};
 		index_buf_desc.Usage = D3D11_USAGE_DEFAULT;
 		index_buf_desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
@@ -27,19 +31,19 @@ public:
 		index_data.SysMemPitch = 0;
 		index_data.SysMemSlicePitch = 0;
 
-		device_.CreateBuffer(&index_buf_desc, &index_data, &index_buffer_);
+		return renderer_.GetDevice()->CreateBuffer(&index_buf_desc, &index_data, &index_buffer_);
 	}
 
-	void Release() {
-		index_buffer_->Release();
+	void SetBuffer() {
+		renderer_.GetContext()->IASetIndexBuffer(index_buffer_.Get(), DXGI_FORMAT_R32_UINT, 0);
 	}
 
 private:
-	ID3D11Device& device_;
+	Renderer& renderer_;
 	int* indices_;
 	size_t size_;
 
-	ID3D11Buffer* index_buffer_;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> index_buffer_;
 };
 
 } // namespace engine
