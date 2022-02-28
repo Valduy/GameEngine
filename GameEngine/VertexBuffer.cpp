@@ -25,7 +25,7 @@ HRESULT engine::VertexBuffer::Init() {
 }
 
 void engine::VertexBuffer::SetBuffer() {
-	const UINT strides[] = { static_cast<UINT>(4 * size_) };
+	const UINT strides[] = { 32 };
 	const UINT offsets[] = { 0 };
 
 	renderer_.GetContext()->IASetVertexBuffers(0, 1, vertex_buffer_.GetAddressOf(), strides, offsets);
